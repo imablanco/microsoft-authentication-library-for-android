@@ -493,7 +493,6 @@ public final class PublicClientApplicationTest extends AndroidTestCase {
         }.performTest();
     }
 
-    @Ignore //suppressed it for now as it fails the CI build.
     @Test
     public void testAcquireTokenSilentNoAuthorityProvidedMultipleInTheCache() throws PackageManager.NameNotFoundException, IOException,
             InterruptedException {
@@ -931,10 +930,6 @@ public final class PublicClientApplicationTest extends AndroidTestCase {
         silentLock.await();
     }
 
-    /*
-    Suppress this unit test for now, because it keeps failing on the CI build.
-     */
-    @Ignore
     @Test
     public void testTurnOffAuthorityValidation() throws MsalException, IOException, InterruptedException {
         final String testAuthority = "https://someauthority.test.com/sometenant";
