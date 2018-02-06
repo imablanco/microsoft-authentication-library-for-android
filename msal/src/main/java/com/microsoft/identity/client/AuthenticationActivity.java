@@ -87,14 +87,6 @@ public final class AuthenticationActivity extends Activity {
             return;
         }
 
-        // We'll use custom tab if the chrome installed on the device comes with custom tab support(on 45 and above it
-        // does). If the chrome package doesn't contain the support, we'll use chrome to launch the UI.
-        if (MsalUtils.getChromePackage(this.getApplicationContext()) == null) {
-            Logger.info(TAG, null, "Chrome is not installed on the device, cannot continue with auth.");
-            sendError(MsalClientException.CHROME_NOT_INSTALLED, "Chrome is not installed on the device, cannot proceed with auth");
-            return;
-        }
-
         mTelemetryRequestId = data.getStringExtra(Constants.TELEMETRY_REQUEST_ID);
         mUiEventBuilder = new UiEvent.Builder();
         Telemetry.getInstance().startEvent(mTelemetryRequestId, mUiEventBuilder);
@@ -233,8 +225,6 @@ public final class AuthenticationActivity extends Activity {
         } else {
             Logger.info(TAG, null, "Chrome tab support is not available, launching chrome browser.");
             final Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(mRequestUrl));
-            browserIntent.setPackage(MsalUtils.getChromePackage(this.getApplicationContext()));
-            browserIntent.addCategory(Intent.CATEGORY_BROWSABLE);
             this.startActivity(browserIntent);
         }
     }

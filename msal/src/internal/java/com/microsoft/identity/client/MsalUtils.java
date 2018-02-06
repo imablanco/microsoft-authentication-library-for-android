@@ -65,7 +65,7 @@ final class MsalUtils {
     /**
      * The encoding scheme the sdk uses.
      */
-    public static final String ENCODING_UTF8 = "UTF_8";
+    public static final String ENCODING_UTF8 = "UTF-8";
 
     /**
      * Default access token expiration time in seconds.

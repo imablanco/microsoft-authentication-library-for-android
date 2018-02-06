@@ -117,12 +117,6 @@ public final class MsalClientException extends MsalException {
     public final static String AUTHORITY_VALIDATION_NOT_SUPPORTED = "authority_validation_not_supported";
 
     /**
-     * chrome_not_installed: Chrome is not installed on the device. The sdk uses chrome custom tab for
-     * authorization requests if available, and will fall back to chrome browser.
-     */
-    public final static String CHROME_NOT_INSTALLED = "chrome_not_installed";
-
-    /**
      * The user provided in the acquire token request doesn't match the user returned from server.
      */
     public final static String USER_MISMATCH = "user_mismatch";
