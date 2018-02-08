@@ -94,7 +94,7 @@ final class AuthUtil {
     // handleInteractiveRequestRedirect
     // Any special handling of request or result code that the developer wants to do must be done here.
     void handleInteractiveRequestRedirect(int requestCode, int resultCode, Intent data) {
-        mApplication.handleInteractiveRequestRedirect(requestCode, resultCode, data);
+        //mApplication.handleInteractiveRequestRedirect(requestCode, resultCode, data);
     }
 
     // This function just demonstrates how to request more scopes.
