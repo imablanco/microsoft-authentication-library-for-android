@@ -24,6 +24,7 @@
 package com.microsoft.identity.client;
 
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.pm.ResolveInfo;
 import android.util.Base64;
@@ -46,13 +47,11 @@ import java.util.concurrent.CountDownLatch;
  * tab or fall back to webview if custom tab is not available).
  */
 final class InteractiveRequest extends BaseRequest {
-    private static final String TAG = InteractiveRequest.class.getSimpleName();
-    private final Set<String> mExtraScopesToConsent = new HashSet<>();
-
     static final int BROWSER_FLOW = 1001;
+    private static final String TAG = InteractiveRequest.class.getSimpleName();
     private static AuthorizationResult sAuthorizationResult;
     private static CountDownLatch sResultLock = new CountDownLatch(1);
-
+    private final Set<String> mExtraScopesToConsent = new HashSet<>();
     private final ActivityWrapper mActivityWrapper;
     private PKCEChallengeFactory.PKCEChallenge mPKCEChallenge;
 
@@ -82,6 +81,31 @@ final class InteractiveRequest extends BaseRequest {
         }
     }
 
+    static synchronized void onAuthenticationResult(int resultCode, Intent data) {
+         Logger.info(TAG, null, "Received authentication result");
+        try {
+            // check it is the same request.
+            sAuthorizationResult = AuthorizationResult.create(resultCode, data);
+        } finally {
+            sResultLock.countDown();
+        }
+    }
+
+    // TODO: 08/02/2018 fix
+    static synchronized void onActivityResult(int requestCode, int resultCode, final Intent data) {
+       /* Logger.info(TAG, null, "Received request code is: " + requestCode + "; result code is: " + resultCode);
+        try {
+            if (requestCode != BROWSER_FLOW) {
+                throw new IllegalStateException("Unknown request code");
+            }
+
+            // check it is the same request.
+            sAuthorizationResult = AuthorizationResult.create(resultCode, data);
+        } finally {
+            sResultLock.countDown();
+        }*/
+    }
+
     /**
      * Pre token request. Launch either chrome custom tab or chrome to get the auth code back.
      */
@@ -97,12 +121,18 @@ final class InteractiveRequest extends BaseRequest {
             throw new MsalClientException(MsalClientException.UNSUPPORTED_ENCODING, e.getMessage(), e);
         }
 
+        if (mActivityWrapper.mReferencedActivity.get() == null) {
+            throw new MsalClientException(MsalClientException.UNRESOLVABLE_INTENT, "The referenced object is already being garbage collected.");
+        }
+
         final Intent intentToLaunch = new Intent(mContext, AuthenticationActivity.class);
         intentToLaunch.putExtra(Constants.REQUEST_URL_KEY, authorizeUri);
         intentToLaunch.putExtra(Constants.REQUEST_ID, mRequestId);
+        intentToLaunch.putExtra(Constants.COMPLETION_INTENT, PendingIntent.getBroadcast(mActivityWrapper.mReferencedActivity.get(), BROWSER_FLOW,
+                new Intent(mActivityWrapper.mReferencedActivity.get(), AuthenticationResponseReceiver.class), PendingIntent.FLAG_UPDATE_CURRENT));
         intentToLaunch.putExtra(
                 Constants.TELEMETRY_REQUEST_ID,
-                mAuthRequestParameters.getRequestContext().getTelemetryRequestId().toString()
+                mAuthRequestParameters.getRequestContext().getTelemetryRequestId()
         );
 
         if (!resolveIntent(intentToLaunch)) {
@@ -111,7 +141,7 @@ final class InteractiveRequest extends BaseRequest {
 
         throwIfNetworkNotAvailable();
 
-        mActivityWrapper.startActivityForResult(intentToLaunch, BROWSER_FLOW);
+        mActivityWrapper.startActivity(intentToLaunch);
         // lock the thread until onActivityResult release the lock.
         try {
             if (sResultLock.getCount() == 0) {
@@ -145,20 +175,6 @@ final class InteractiveRequest extends BaseRequest {
         }
 
         return super.postTokenRequest();
-    }
-
-    static synchronized void onActivityResult(int requestCode, int resultCode, final Intent data) {
-        Logger.info(TAG, null, "Received request code is: " + requestCode + "; result code is: " + resultCode);
-        try {
-            if (requestCode != BROWSER_FLOW) {
-                throw new IllegalStateException("Unknown request code");
-            }
-
-            // check it is the same request.
-            sAuthorizationResult = AuthorizationResult.create(resultCode, data);
-        } finally {
-            sResultLock.countDown();
-        }
     }
 
     String appendQueryStringToAuthorizeEndpoint() throws UnsupportedEncodingException, MsalClientException {
@@ -333,52 +349,6 @@ final class InteractiveRequest extends BaseRequest {
         private static final String DIGEST_ALGORITHM = "SHA-256";
         private static final String ISO_8859_1 = "ISO_8859_1";
 
-        static class PKCEChallenge {
-
-            /**
-             * The client creates a code challenge derived from the code
-             * verifier by using one of the following transformations.
-             * <p>
-             * Sophisticated attack scenarios allow the attacker to
-             * observe requests (in addition to responses) to the
-             * authorization endpoint.  The attacker is, however, not able to
-             * act as a man in the middle. To mitigate this,
-             * "code_challenge_method" value must be set either to "S256" or
-             * a value defined by a cryptographically secure
-             * "code_challenge_method" extension. In this implementation "S256" is used.
-             * <p>
-             * Example for the S256 code_challenge_method
-             *
-             * @see <a href="https://tools.ietf.org/html/rfc7636#page-17">RFC-7636</a>
-             */
-            enum ChallengeMethod {
-                S256
-            }
-
-            /**
-             * A cryptographically random string that is used to correlate the
-             * authorization request to the token request.
-             * <p>
-             * code-verifier = 43*128unreserved
-             * where...
-             * unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
-             * ALPHA = %x41-5A / %x61-7A
-             * DIGIT = %x30-39
-             */
-            private final String mCodeVerifier;
-
-            /**
-             * A challenge derived from the code verifier that is sent in the
-             * authorization request, to be verified against later.
-             */
-            private final String mCodeChallenge;
-
-            PKCEChallenge(String codeVerifier, String codeChallenge) {
-                this.mCodeVerifier = codeVerifier;
-                this.mCodeChallenge = codeChallenge;
-            }
-        }
-
         /**
          * Creates a new instance of {@link PKCEChallenge}.
          *
@@ -415,6 +385,51 @@ final class InteractiveRequest extends BaseRequest {
                                 + "Consult the release documentation for your implementation.", e);
             }
         }
+
+        static class PKCEChallenge {
+
+            /**
+             * A cryptographically random string that is used to correlate the
+             * authorization request to the token request.
+             * <p>
+             * code-verifier = 43*128unreserved
+             * where...
+             * unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
+             * ALPHA = %x41-5A / %x61-7A
+             * DIGIT = %x30-39
+             */
+            private final String mCodeVerifier;
+            /**
+             * A challenge derived from the code verifier that is sent in the
+             * authorization request, to be verified against later.
+             */
+            private final String mCodeChallenge;
+
+            PKCEChallenge(String codeVerifier, String codeChallenge) {
+                this.mCodeVerifier = codeVerifier;
+                this.mCodeChallenge = codeChallenge;
+            }
+
+            /**
+             * The client creates a code challenge derived from the code
+             * verifier by using one of the following transformations.
+             * <p>
+             * Sophisticated attack scenarios allow the attacker to
+             * observe requests (in addition to responses) to the
+             * authorization endpoint.  The attacker is, however, not able to
+             * act as a man in the middle. To mitigate this,
+             * "code_challenge_method" value must be set either to "S256" or
+             * a value defined by a cryptographically secure
+             * "code_challenge_method" extension. In this implementation "S256" is used.
+             * <p>
+             * Example for the S256 code_challenge_method
+             *
+             * @see <a href="https://tools.ietf.org/html/rfc7636#page-17">RFC-7636</a>
+             */
+            enum ChallengeMethod {
+                S256
+            }
+        }
     }
 
     /**
@@ -428,12 +443,12 @@ final class InteractiveRequest extends BaseRequest {
             mReferencedActivity = new WeakReference<Activity>(activity);
         }
 
-        void startActivityForResult(final Intent intent, int requestCode) throws MsalClientException {
+        void startActivity(final Intent intent) throws MsalClientException {
             if (mReferencedActivity.get() == null) {
                 throw new MsalClientException(MsalClientException.UNRESOLVABLE_INTENT, "The referenced object is already being garbage collected.");
             }
 
-            mReferencedActivity.get().startActivityForResult(intent, requestCode);
+            mReferencedActivity.get().startActivity(intent);
         }
     }
 }

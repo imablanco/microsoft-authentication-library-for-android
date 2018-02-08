@@ -24,6 +24,7 @@
 package com.microsoft.identity.client;
 
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.net.Uri;
@@ -58,6 +59,7 @@ public final class AuthenticationActivity extends Activity {
     private MsalCustomTabsServiceConnection mCustomTabsServiceConnection;
     private UiEvent.Builder mUiEventBuilder;
     private String mTelemetryRequestId;
+    private PendingIntent mCompleteIntent;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -86,6 +88,7 @@ public final class AuthenticationActivity extends Activity {
             sendError(MsalClientException.UNRESOLVABLE_INTENT, "Request url is not set on the intent");
             return;
         }
+        mCompleteIntent = data.getParcelableExtra(Constants.COMPLETION_INTENT);
 
         mTelemetryRequestId = data.getStringExtra(Constants.TELEMETRY_REQUEST_ID);
         mUiEventBuilder = new UiEvent.Builder();
@@ -142,50 +145,6 @@ public final class AuthenticationActivity extends Activity {
         // Create the Intent used to launch the Url
         mCustomTabsIntent = builder.setShowTitle(true).build();
         mCustomTabsIntent.intent.setPackage(mChromePackageWithCustomTabSupport);
-    }
-
-    private static class MsalCustomTabsServiceConnection extends CustomTabsServiceConnection {
-
-        private final WeakReference<CountDownLatch> mLatchWeakReference;
-        private CustomTabsClient mCustomTabsClient;
-        private CustomTabsSession mCustomTabsSession;
-        private boolean mCustomTabsServiceIsBound;
-
-        MsalCustomTabsServiceConnection(final CountDownLatch latch) {
-            mLatchWeakReference = new WeakReference<>(latch);
-        }
-
-        @Override
-        public void onCustomTabsServiceConnected(ComponentName name, CustomTabsClient client) {
-            final CountDownLatch latch = mLatchWeakReference.get();
-
-            mCustomTabsServiceIsBound = true;
-            mCustomTabsClient = client;
-            mCustomTabsClient.warmup(0L);
-            mCustomTabsSession = mCustomTabsClient.newSession(null);
-
-            if (null != latch) {
-                latch.countDown();
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            mCustomTabsServiceIsBound = false;
-        }
-
-        /**
-         * Gets the {@link CustomTabsSession} associated to this CustomTabs connection.
-         *
-         * @return the session.
-         */
-        CustomTabsSession getCustomTabsSession() {
-            return mCustomTabsSession;
-        }
-
-        boolean getCustomTabsServiceIsBound() {
-            return mCustomTabsServiceIsBound;
-        }
     }
 
     /**
@@ -260,8 +219,12 @@ public final class AuthenticationActivity extends Activity {
             Telemetry.getInstance().stopEvent(mTelemetryRequestId, mUiEventBuilder);
         }
 
-        setResult(resultCode, data);
-        this.finish();
+        try {
+            mCompleteIntent.send(this, resultCode, data);
+        } catch (PendingIntent.CanceledException e) {
+            Logger.error(TAG, null, "Cancel the authentication request.", e);
+        }
+        finish();
     }
 
     /**
@@ -277,5 +240,49 @@ public final class AuthenticationActivity extends Activity {
         errorIntent.putExtra(Constants.UIResponse.ERROR_CODE, errorCode);
         errorIntent.putExtra(Constants.UIResponse.ERROR_DESCRIPTION, errorDescription);
         returnToCaller(Constants.UIResponse.AUTH_CODE_ERROR, errorIntent);
+    }
+
+    private static class MsalCustomTabsServiceConnection extends CustomTabsServiceConnection {
+
+        private final WeakReference<CountDownLatch> mLatchWeakReference;
+        private CustomTabsClient mCustomTabsClient;
+        private CustomTabsSession mCustomTabsSession;
+        private boolean mCustomTabsServiceIsBound;
+
+        MsalCustomTabsServiceConnection(final CountDownLatch latch) {
+            mLatchWeakReference = new WeakReference<>(latch);
+        }
+
+        @Override
+        public void onCustomTabsServiceConnected(ComponentName name, CustomTabsClient client) {
+            final CountDownLatch latch = mLatchWeakReference.get();
+
+            mCustomTabsServiceIsBound = true;
+            mCustomTabsClient = client;
+            mCustomTabsClient.warmup(0L);
+            mCustomTabsSession = mCustomTabsClient.newSession(null);
+
+            if (null != latch) {
+                latch.countDown();
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            mCustomTabsServiceIsBound = false;
+        }
+
+        /**
+         * Gets the {@link CustomTabsSession} associated to this CustomTabs connection.
+         *
+         * @return the session.
+         */
+        CustomTabsSession getCustomTabsSession() {
+            return mCustomTabsSession;
+        }
+
+        boolean getCustomTabsServiceIsBound() {
+            return mCustomTabsServiceIsBound;
+        }
     }
 }

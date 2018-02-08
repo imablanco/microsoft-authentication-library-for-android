@@ -315,18 +315,6 @@ public final class PublicClientApplication {
         return null;
     }
 
-    /**
-     * MSAL requires the calling app to pass an {@link Activity} which <b> MUST </b> call this method to get the auth
-     * code passed back correctly.
-     *
-     * @param requestCode The request code for interactive request.
-     * @param resultCode  The result code for the request to get auth code.
-     * @param data        {@link Intent} either contains the url with auth code as query string or the errors.
-     */
-    public void handleInteractiveRequestRedirect(int requestCode, int resultCode, final Intent data) {
-        InteractiveRequest.onActivityResult(requestCode, resultCode, data);
-    }
-
     // Interactive APIs. Will launch the system browser with web UI.
 
     /**
@@ -334,9 +322,6 @@ public final class PublicClientApplication {
      * Default value for {@link UiBehavior} is {@link UiBehavior#SELECT_ACCOUNT}.
      *
      * @param activity Non-null {@link Activity} that is used as the parent activity for launching the {@link AuthenticationActivity}.
-     *                 All apps doing an interactive request are required to call the
-     *                 {@link PublicClientApplication#handleInteractiveRequestRedirect(int, int, Intent)} within the calling
-     *                 activity {@link Activity#onActivityResult(int, int, Intent)}.
      * @param scopes   The non-null array of scopes to be requested for the access token.
      *                 MSAL always sends the scopes 'openid profile offline_access'.  Do not include any of these scopes in the scope parameter.
      * @param callback The {@link AuthenticationCallback} to receive the result back.
@@ -360,8 +345,6 @@ public final class PublicClientApplication {
      * Default value for {@link UiBehavior} is {@link UiBehavior#SELECT_ACCOUNT}.
      *
      * @param activity  Non-null {@link Activity} that will be used as the parent activity for launching the {@link AuthenticationActivity}.
-     *                  All the apps doing interactive request are required to call the
-     *                  {@link PublicClientApplication#handleInteractiveRequestRedirect(int, int, Intent)} within the calling
      *                  activity {@link Activity#onActivityResult(int, int, Intent)}.
      * @param scopes    The non-null array of scopes to be requested for the access token.
      *                  MSAL always sends the scopes 'openid profile offline_access'.  Do not include any of these scopes in the scope parameter.
@@ -389,9 +372,6 @@ public final class PublicClientApplication {
      * Default value for {@link UiBehavior} is {@link UiBehavior#SELECT_ACCOUNT}.
      *
      * @param activity             Non-null {@link Activity} that will be used as the parent activity for launching the {@link AuthenticationActivity}.
-     *                             All the apps doing interactive request are required to call the
-     *                             {@link PublicClientApplication#handleInteractiveRequestRedirect(int, int, Intent)} within the calling
-     *                             activity {@link Activity#onActivityResult(int, int, Intent)}.
      * @param scopes               The non-null array of scopes to be requested for the access token.
      *                             MSAL always sends the scopes 'openid profile offline_access'.  Do not include any of these scopes in the scope parameter.
      * @param loginHint            Optional. If provided, will be used as the query parameter sent for authenticating the user,
@@ -420,9 +400,6 @@ public final class PublicClientApplication {
      * Default value for {@link UiBehavior} is {@link UiBehavior#SELECT_ACCOUNT}.
      *
      * @param activity            Non-null {@link Activity} that will be used as the parent activity for launching the {@link AuthenticationActivity}.
-     *                            All the apps doing interactive request are required to call the
-     *                            {@link PublicClientApplication#handleInteractiveRequestRedirect(int, int, Intent)} within the calling
-     *                            activity {@link Activity#onActivityResult(int, int, Intent)}.
      * @param scopes              The non-null array of scopes to be requested for the access token.
      *                            MSAL always sends the scopes 'openid profile offline_access'.  Do not include any of these scopes in the scope parameter.
      * @param user                Optional. If provided, will be used to force the session continuation.  If user tries to sign in with a different user,
@@ -451,9 +428,6 @@ public final class PublicClientApplication {
      * Default value for {@link UiBehavior} is {@link UiBehavior#SELECT_ACCOUNT}.
      *
      * @param activity             Non-null {@link Activity} that will be used as the parent activity for launching the {@link AuthenticationActivity}.
-     *                             All the apps doing interactive request are required to call the
-     *                             {@link PublicClientApplication#handleInteractiveRequestRedirect(int, int, Intent)} within the calling
-     *                             activity {@link Activity#onActivityResult(int, int, Intent)}.
      * @param scopes               The non-null array of scopes to be requested for the access token.
      *                             MSAL always sends the scopes 'openid profile offline_access'.  Do not include any of these scopes in the scope parameter.
      * @param loginHint            Optional. If provided, will be used as the query parameter sent for authenticating the user,
@@ -485,9 +459,6 @@ public final class PublicClientApplication {
      * Default value for {@link UiBehavior} is {@link UiBehavior#SELECT_ACCOUNT}.
      *
      * @param activity             Non-null {@link Activity} that will be used as the parent activity for launching the {@link AuthenticationActivity}.
-     *                             All the apps doing interactive request are required to call the
-     *                             {@link PublicClientApplication#handleInteractiveRequestRedirect(int, int, Intent)} within the calling
-     *                             activity {@link Activity#onActivityResult(int, int, Intent)}.
      * @param scopes               The non-null array of scopes to be requested for the access token.
      *                             MSAL always sends the scopes 'openid profile offline_access'.  Do not include any of these scopes in the scope parameter.
      * @param user                 Optional. If provided, will be used to force the session continuation.  If user tries to sign in with a different user, error

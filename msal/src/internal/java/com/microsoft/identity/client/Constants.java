@@ -36,6 +36,8 @@ final class Constants {
 
     public static final String REQUEST_ID = "com.microsoft.identity.request.id";
 
+    public static final String COMPLETION_INTENT = "com.microsoft.identity.request.completion_intent";
+
     public static final String TELEMETRY_REQUEST_ID = "com.microsoft.identity.telemetry.request.id";
 
     public static final String CUSTOM_TAB_REDIRECT = "com.microsoft.identity.customtab.redirect";
